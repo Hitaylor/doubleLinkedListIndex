@@ -1,0 +1,2 @@
+# doubleLinkedListIndex
+为幕文件系统配套的基于双向链表的索引结构
