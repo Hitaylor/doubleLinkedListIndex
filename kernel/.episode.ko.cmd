@@ -1,0 +1,1 @@
+cmd_/home/ok/code/episodeFS_directIO_linbin0417/kernel/episode.ko := ld -r -m elf_x86_64 -z max-page-size=0x200000 -T ./scripts/module-common.lds --build-id  -o /home/ok/code/episodeFS_directIO_linbin0417/kernel/episode.ko /home/ok/code/episodeFS_directIO_linbin0417/kernel/episode.o /home/ok/code/episodeFS_directIO_linbin0417/kernel/episode.mod.o ;  true
