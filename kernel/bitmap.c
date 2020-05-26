@@ -91,9 +91,12 @@ unsigned long episode_count_free_blocks(struct super_block *sb)
 		<< sbi->s_log_zone_size);
 }
 
+<<<<<<< HEAD
 /**
  * 这个应该是根据sb，和需要查找的ino号，以及inode链表，查找对应的inode信息。如果缓冲区有ino对应的inode，则返回;否则需要读盘。
  */
+=======
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 struct episode_inode *
 episode_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 {
@@ -169,9 +172,13 @@ void episode_free_inode(struct inode * inode)
 	spin_unlock(&bitmap_lock);
 	mark_buffer_dirty(bh);
 }
+<<<<<<< HEAD
 /**
  * 创建一个inode，把它放到dir的目录项里面，同时从inode区分配一个空间来存储inode，并对inode进行初始化。
  */
+=======
+
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 struct inode *episode_new_inode(const struct inode *dir, umode_t mode, int *error)
 {
 	struct super_block *sb = dir->i_sb;
@@ -218,6 +225,7 @@ struct inode *episode_new_inode(const struct inode *dir, umode_t mode, int *erro
 	inode->i_ino = j;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
 	inode->i_blocks = 0;
+<<<<<<< HEAD
 	//上面的都是vfs里面的inode提供的字段，下面的是episode_inode独有的字段，包括i_data[]和i_lastrecordpos
 	memset(&episode_i(inode)->u, 0, sizeof(episode_i(inode)->u));
 	memset(&episode_i(inode)->i_lastrecordpos,0,sizeof(episode_i(inode)->i_lastrecordpos));//jsc 0520
@@ -225,6 +233,12 @@ struct inode *episode_new_inode(const struct inode *dir, umode_t mode, int *erro
 	insert_inode_hash(inode);//这就体现出来buffer_head的好处了，只是把bh连接起来，而inode的具体类型可以是ext2的，也可以是episode的
 	mark_inode_dirty(inode);
 	printk("[bitmap.c, episode_new_inode()] ino:%d, i_blocks:%d, ctime:%d, lastrecordpos:%ld\n",inode->i_ino,inode->i_blocks,inode->i_ctime,episode_i(inode)->i_lastrecordpos);
+=======
+	memset(&episode_i(inode)->u, 0, sizeof(episode_i(inode)->u));
+	insert_inode_hash(inode);
+	mark_inode_dirty(inode);
+
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 	*error = 0;
 	return inode;
 }

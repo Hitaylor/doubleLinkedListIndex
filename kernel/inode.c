@@ -451,8 +451,11 @@ static struct inode *__episode_iget(struct inode *inode)
 	inode->i_blocks = 0;
 	for (i = 0; i < 10; i++)
 		episode_inode->u.i2_data[i] = raw_inode->i_zone[i];
+<<<<<<< HEAD
 	episode_inode->i_lastrecordpos = raw_inode->i_lastrecordpos;//jsc
 	printk("[inode.c, __episode_iget()] The i_lastrecordpos=%ld\n",episode_inode->i_lastrecordpos);
+=======
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 	episode_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
 	brelse(bh);
 	unlock_new_inode(inode);

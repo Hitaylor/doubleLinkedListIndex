@@ -26,6 +26,7 @@ void left(char *dst,char *src, int n)
     *(q++)='\0'; /*有必要吗？很有必要*/
     //return dst;
 }
+<<<<<<< HEAD
 /**
  * 因为我们用到的user buf是void*类型的，而且，事实上，我们的buf中是存在0x00的，主要就是长度那4个字节的内容。如果用char来处理，0x00是字符结束的标志
  * 根本不会往下走。所以还需要重新开发一个函数。
@@ -36,17 +37,27 @@ void mid(void *dest, void *src, int n, int m)
 }
 /*从字符串的中间截取n个字符*/
 void mid_char(char *dst,char *src, int n,int m) /*n为长度，m为位置*/
+=======
+
+/*从字符串的中间截取n个字符*/
+void mid(char *dst,char *src, int n,int m) /*n为长度，m为位置*/
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 {
     char *p = src;
     char *q = dst;
     //int len = strlen(src);
+<<<<<<< HEAD
     /*int len = 0;
+=======
+    int len = 0;
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
     if(!src)
     {
         printk("source string is null\n");
         dst = NULL;
         return ;
     }
+<<<<<<< HEAD
     printk("I am here 3.1!\n");
     while(src[len] !='\0'){
         len++;
@@ -69,6 +80,17 @@ void mid_char(char *dst,char *src, int n,int m) /*n为长度，m为位置*/
 //    *(q++)='\0'; /*有必要吗？很有必要*///这个可能越界，例如我们只取4个字节
     printk("\n");
     printk("I am here 3.5!\n");
+=======
+    while(src[len]){
+        len++;
+    } 
+    if(n>len) n = len-m;    /*从第m个到最后*/
+    if(m<0) m=0;    /*从第一个开始*/
+    if(m>len) return NULL;
+    p += m;
+    while(n--) *(q++) = *(p++);
+    *(q++)='\0'; /*有必要吗？很有必要*/
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
     //return dst;
 }
 
@@ -93,16 +115,23 @@ void right(char *dst,char *src, int n)
     while(*(q++) = *(p++));
     //return dst;
 }
+<<<<<<< HEAD
 
 /**
  * 可以使用current_time(inode)这个内核提供的方法
  */
+=======
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 int getCurrentTime(void ){
   struct timeval tv;
   do_gettimeofday(&tv);
   //gettimeofday(&tv, NULL);    //linux下该函数在sys/time.h头文件中  
+<<<<<<< HEAD
   //return tv.tv_sec * 1000 + tv.tv_usec / 1000;
   return (int)tv.tv_sec;//原来是long int，现在转成int
+=======
+  return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+>>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 }
 
 /**
