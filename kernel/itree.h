@@ -20,11 +20,8 @@ static inline block_t *i_data(struct inode *inode)
 	return (block_t *)episode_i(inode)->u.i2_data;
 }
 
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 #define DIRCOUNT 7
 #define INDIRCOUNT(sb) (1 << ((sb)->s_blocksize_bits - 2))
 

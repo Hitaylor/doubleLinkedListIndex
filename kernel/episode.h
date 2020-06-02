@@ -69,19 +69,12 @@ extern struct episode_dir_entry *episode_dotdot(struct inode*, struct page**);
 extern ino_t episode_inode_by_name(struct dentry*);
 
 extern void left(char *dst,char *src, int n);
-<<<<<<< HEAD
 extern void mid_char(char *dst,char *src, int n, int m);//字符串截取函数
 extern void right(char *dst,char *src, int n);
 extern int getCurrentTime(void);
 
 extern void mid(void *dest, void *src, int n, int m);//任意类型截取函数
 
-=======
-extern void mid(char *dst,char *src, int n, int m);
-extern void right(char *dst,char *src, int n);
-extern int getCurrentTime(void);
-
->>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 extern void int32tochar(int32_t num, char ch[sizeof(int32_t)]);
 extern void chartoint32(int32_t *num, char ch[sizeof(int32_t)]);
 
@@ -104,7 +97,6 @@ static inline unsigned episode_blocks_needed(unsigned bits, unsigned blocksize)
 {
 	return DIV_ROUND_UP(bits, blocksize * 8);
 }
-<<<<<<< HEAD
 /*
 获取inode中记录的上一条记录的位置。jsc
 */
@@ -112,8 +104,6 @@ static inline __u64 i_lastrecordpos(struct inode *inode)
 {
 	return episode_i(inode)->i_lastrecordpos;
 };
-=======
->>>>>>> 63c40a9d1851e5c1ebf3a48d52da4f195fedccf9
 
 #if defined(CONFIG_EPISODE_FS_NATIVE_ENDIAN) && \
 	defined(CONFIG_EPISODE_FS_BIG_ENDIAN_16BIT_INDEXED)

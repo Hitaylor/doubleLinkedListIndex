@@ -61,8 +61,9 @@ static inline void init_kiocb(struct kiocb *kiocb, struct file *filp)
  * Prev next   timestamp        offset  lenth   data
  * 8    8       4               8       4       k    
  * offset目前指向prev的开头位置
- * 这里需要注意的是：buf的大小应该是512的2^n的倍数。也就是说，buf中前面的数据是没有填充的，之后最后一条数据的后面的填充的。所以，我们在构造buff的时候
+ * 这里需要注意的是：buf的大小应该是512的2^n的倍数。也就是说，buf中前面的数据是没有填充的，之后最后一条数据的后面的填充的，也就是说buf中除了最后一条数据之后可能存在用0填充之外，其余地方不能存在洞。所以，我们在构造buff的时候
  * 也要注意处理这方面的内容。也就是buf中有一部分内容是空的。如果我们构造的buff不是512的2^n倍数，则可能写不进去。
+ * 目前的版本，要求buf要有足够的余量来容纳扩展字段。
  */
 static ssize_t episode_direct_write(struct file *filp, const char __user *buf, size_t len, loff_t *ppos)
 {
@@ -76,16 +77,16 @@ static ssize_t episode_direct_write(struct file *filp, const char __user *buf, s
         __u32 pos = 0;//buf内的偏移量
        // __u32  dataSizeinRec = 0;//buf内当前数据记录的数据段长度
         __u32 tmp= 0;
-        __u32 bufLen = len;//buf的长度
+        __u32 bufLen = len,writeLen=0;//buf的长度
         __u32 timestamp = 0;//时间戳
-        __u64 position=0;//与prev、next类型一致
+        __u64 position=0;//与prev、next类型一致,nextPosition用于buff2中记录next字段的位置
         __u64 prev = 0,next = 0,offset = 0;//在文件中，当前记录的前一个记录的起始位置、next字段起始位置，以及当前记录的数据段位置
         char  lenSeg[4]={0},time[sizeof(timestamp)]={0};//用于记录长度和时间的临时变量
-        __u32  recLen=0;
+        __u32  recLen=0,lastRecLen=0,recNum=0,additionalLen=0,totalNeedforBuff2=0;//lastRecLen记录上一条数据的长度，用途是用于确定最后一条数据的next字段的起始位置
         char * ptr8;
         int i,testcount=0;
         __u64 tmpLen;
-        __u64 curPos;
+        __u64 curPos,basePos;
         __u64 lastRecPos = 0;
         int retnum = 0;
 	//读取inode中的上一条记录的位置，jsc 0510
@@ -105,10 +106,12 @@ struct iovec iov;
         if(!episode_inode){
                 printk("The episode_inode got from the inode is null!\n"); 
         }
+        additionalLen = sizeof(prev)+sizeof(next)+sizeof(offset)+sizeof(time);
         printk("I am here! and the user buf size is %d\n" ,len);
         lastRecPos = episode_inode->i_lastrecordpos;
         tmpLen = i_lastrecordpos(inode);
         curPos = inode->i_size;//文件游标位置,也是这次写操作的base
+        basePos = curPos;
         printk("The last data record position: %ld\t tmpLen=%lld\n current postion:%ld\n",lastRecPos,tmpLen,curPos);
         if(len%512 != 0)
         {
@@ -117,11 +120,12 @@ struct iovec iov;
         }
         printk("len=%d\n",len);
         //这里，后续可以先读取一遍buf，得到具体的record数量n，因为对于每条record，扩展需要添加的字节数是固定的，8+8+8+4=28字节，则比原来需要增加28n字节，然后将len+28n向上取512的整数倍，即为buff的长度
-       // buff = memalign(512,(1+len/512)*512);
-        buff =(char *) kmalloc((1+len/512)*512, GFP_KERNEL);
+       
+        //buff =(char *) kmalloc((1+len/512)*512, GFP_KERNEL);//buff存储的内容和buf一样，只不过是内核态的空间
+        buff = (char*)kmalloc(len,GFP_KERNEL);
         //printk("ater kmalloc, buff:");
        // for(i=0;i<1024;i++) printk("buff[%d]=%u",i,buff[i]<0?(255+buff[i]):buff[i]);
-        memset(buff,0,(1+len/512)*512);
+        memset(buff,0,len);
         // printk("ater memset, buff:");
         //for(i=0;i<1024;i++) printk("buff[%d]=%u",i,buff[i]<0?(255+buff[i]):buff[i]);
         if(!buff)
@@ -129,27 +133,58 @@ struct iovec iov;
            printk("kmalloc failed for the buff!\n");
         }
         printk("buff size %d\n",sizeof(buff));
-        printk("I am here 2!\n");
-        buff2 = (char *)kmalloc((1+len/512)*512, GFP_KERNEL);
-        memset(buff2,0,(1+len/512)*512);
-        
-        printk("size of buff2:%d\n",sizeof(buff2));
+        //给buff赋值
         retnum = copy_from_user(buff,buf,1024);
         //printk("ater copy from user, buff:");
         //for(i=0; i<len; i++) printk("buff[%d]=%d, ",i,buff[i]);
         printk(" I am here 3! retnum=%d for the function copy_from_user(). pos=%d, bufLen=%d\n",retnum,pos,bufLen);
+        //遍历buff，获取记录数，并确定要扩展的长度，最终确定buff2有多长
+        pos=0;
+        while(pos<bufLen-1){
+           memcpy(&recLen,&buff[pos],sizeof(recLen));
+           if(recLen == 0){
+                break;
+           }
+           pos = pos+recLen+sizeof(recLen);
+           recNum++;
+        }
+        totalNeedforBuff2 = pos+recNum*additionalLen;
+        if(totalNeedforBuff2%512!=0){
+           totalNeedforBuff2 = (1+(int)totalNeedforBuff2/512)*512;
+        }
+        //因为当前版本中，对于buff2长度超过buf的时候，没法处理（因为要把buff2的内容通过copy to user赋值给buf，就会出现溢出），所以，这里加判断，是否会溢出，溢出则返回。
+        if(totalNeedforBuff2 > len) {
+           printk("Not enough space for index extention in the buf!!!");
+           return -1;
+        }
+         printk("total need for buff2 is %ld, and there are %d records in buf, real data in buf is %d!\n",totalNeedforBuff2,recNum,pos);
+        buff2 = (char *)kmalloc(len, GFP_KERNEL);
+        memset(buff2,0,len);
+        
+       // printk("size of buff2:%d\n",sizeof(buff2));
+        
+        pos = 0;
         //这里bufLen=0,是有问题的
         while(pos < bufLen-1){ //遍历buf中的每一条记录，进行扩充，形成新的结构，然后放到buff中。
           // mid_char(&lenSeg[0], buf, 4, pos);//获取buf中一条记录的长度字段
           // printk("Address of reLen : %x, buff:%x\n",&recLen,buff);
            memcpy(&recLen,&buff[pos],sizeof(recLen));
            printk(" I am here 4! and recLen=%d\n",recLen);
-           if(recLen == 0) break;//跳出while，也就是buf中已经没有新记录了。
+           if(recLen == 0) {
+                printk("Reach the end of the records in buff!");
+                //Todo 设定本buff2中最后一条数据的next指向为下一个buff2的第8字节
+                next = basePos+len+sizeof(next);
+                printk("next=%ul\n",next);
+               // memcpy(&buff2[curPos-lastRecLen - sizeof(recLen)-sizeof(timestamp)-sizeof(offset)-sizeof(next)],&next,sizeof(next));
+                memcpy(&buff2[lastRecPos-basePos+sizeof(prev)],&next,sizeof(next));
+                break;//跳出while，也就是buf中已经没有新记录了。
+           }
           
            //构造索引结构和索引信息
            //prev,next,timestamp,offset,len,data
            prev = lastRecPos;
            next = curPos+sizeof(prev)+sizeof(next)+sizeof(timestamp)+sizeof(offset)+sizeof(recLen)+recLen+sizeof(prev);
+          // nextPosition =
            timestamp = getCurrentTime();
            offset = curPos;
            //printk("Current time: %d, prev=%ld, next=%ld,recLen=%d,offset=%ld, and prev position=%ld\n",timestamp,prev,next,recLen,offset,position);
@@ -196,11 +231,12 @@ struct iovec iov;
           
            printk("The start position of the next extended record is %ld\n",curPos);
            pos = pos+sizeof(recLen)+recLen;
+           lastRecLen = recLen;
            recLen = 0;
            printk("current pos:%d\n",pos);
         }
         //Todo 增加最后一条数据的处理机制，指向本buf结束后的下一个位置。
-
+        
 
         printk("After extending,data size in buff2 is %d, data in buff2 are:\n",position);
         for(i=0;i<position;i++){
@@ -211,13 +247,14 @@ struct iovec iov;
                 else printk("buff2[%d]=%u,",i,buff2[i]<0? (255+buff2[i]):buff2[i]);
         }
         printk("\n");
-        retnum = clear_user(buf,len);
+        retnum = clear_user(buf,len);//这里不敢把len改成其他长度，所以这里是有坑的！！！因为buf是用户态的，我们最多清理len长度。如果清理过长，会不会出问题？
         printk("bytes can not be cleared in the user buf is %d/%d\n",retnum,len);
-        retnum = copy_to_user(buf,buff2,len);//改为按照buf的大小来赋值，将来可以通过循环控制，放置buf大小不能更改
+        //retnum = copy_to_user(buf,buff2,totalNeedforBuff2);
+        retnum = copy_to_user(buf,buff2,len);//这里按照buff2的实际长度给用户态buf赋值。totalNeedforBuff2如果和len不相等，不知道会不会有问题。最好是len长一些。
         printk("bytes cannot be copied to user space is retnum=%d for the function copty_to_user()\n",retnum);
         //再次将buf中的内容copy到buff中，测试buf中是否有内容
        
-         printk("pos = %d\n",pos);
+       /*  printk("pos = %d\n",pos);
           memset(buff,0,(1+len/512)*512);//和前面一致，要进行清零
       
         for(i=0;i<(1+len/512)*512;i++) {
@@ -232,17 +269,22 @@ struct iovec iov;
                 printk("buff[%d]=%u",i,buff[i]<0? (255+buff[i]):buff[i]);
         }
         printk("after the copy_from_user, there are %d zeroes!\n",testcount);
+        */
         //修改buf，jsc
+       /* if(len<totalNeedforBuff2) writeLen = totalNeedforBuff2;
+        else writeLen = len;*/
+        writeLen = len;
+
        // struct iovec iov = { .iov_base = (void __user *)buf, .iov_len = len };
         iov.iov_base = (void __user *)buf;
         //iov.iov_len = position+1;//此时buff的长度应为512整数倍。但这里的position+1却不一定，所以这里填写什么需要确认一下
-	iov.iov_len = len;
-        
+	//iov.iov_len = len;
+       iov.iov_len = writeLen; //这里也要进行修改
 
 	init_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
-	iov_iter_init(&iter, WRITE, &iov, 1, len);
-
+	//iov_iter_init(&iter, WRITE, &iov, 1, len);//
+iov_iter_init(&iter, WRITE, &iov, 1, writeLen);//
 	ret = generic_file_write_iter(&kiocb, &iter);
 
         BUG_ON(ret == -EIOCBQUEUED);
