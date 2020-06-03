@@ -134,7 +134,7 @@ static inline ssize_t call_read_iter(struct file *file, struct kiocb *kio,
 }
 
 
-6. generic_file_read_iter，这个可能是我们要重写的，连同其下面调用的函数都要改写。
+6. generic_file_read_iter，这个可能是我们要重写的，连同其下面调用的函数都要改写。./mm/filemap.c
 
 /**
  * generic_file_read_iter - generic filesystem read routine
@@ -220,11 +220,11 @@ EXPORT_SYMBOL(generic_file_read_iter);
 static ssize_t generic_file_buffered_read(struct kiocb *iocb,
 		struct iov_iter *iter, ssize_t written)
 {
-	struct file *filp = iocb->ki_filp;
-	struct address_space *mapping = filp->f_mapping;
-	struct inode *inode = mapping->host;
-	struct file_ra_state *ra = &filp->f_ra;
-	loff_t *ppos = &iocb->ki_pos;
+	struct file *filp = iocb->ki_filp;//从iocb中拿到文件指针，
+	struct address_space *mapping = filp->f_mapping;//获得文件对应的address_space对象，其实就是inode对应的address_space对象。
+	struct inode *inode = mapping->host;//该address_space 对象mapping对应的inode
+	struct file_ra_state *ra = &filp->f_ra;//文件预读相关的readAhead的缩写
+	loff_t *ppos = &iocb->ki_pos;//long long 类型
 	pgoff_t index;
 	pgoff_t last_index;
 	pgoff_t prev_index;
@@ -396,7 +396,7 @@ readpage:
 		 */
 		ClearPageError(page);
 		/* Start the actual read. The read will unlock the page. */
-		error = mapping->a_ops->readpage(filp, page);
+		error = mapping->a_ops->readpage(filp, page); //8. 调用episode的readpage（）函数
 
 		if (unlikely(error)) {
 			if (error == AOP_TRUNCATED_PAGE) {
@@ -468,4 +468,10 @@ out:
 	*ppos = ((loff_t)index << PAGE_SHIFT) + offset;
 	file_accessed(filp);
 	return written ? written : error;
+}
+
+
+static int episode_readpage(struct file *file, struct page *page)
+{
+	return block_read_full_page(page,episode_get_block);
 }
