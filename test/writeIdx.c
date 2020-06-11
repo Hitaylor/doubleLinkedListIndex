@@ -11,7 +11,7 @@ void main(){
 	char *name = "/mnt/episode/idx1.txt";
 
 	int fd;
-	int loopnum=3;
+	int loopnum=10;
 	for(int i=0;i<loopnum;i++){
 		printf("loopnum = %d\n",i);
 		fd =open(name,O_CREAT|O_RDWR|O_APPEND|O_DIRECT,0600);
@@ -37,15 +37,16 @@ void main(){
 		off +=sizeof(len3);
 	memcpy(content+off,buf3,len3);
 		off =0;
-
+/*
 		for(int j=0;j<50;j++){
 		    if(content[j]<123 && content[j]>96) printf("content[%d]=%d, =%c\n",j,content[j],content[j]);
                     else if(content[j]<91 && content[j]>64) printf("content[%d]=%d, =%c\n",j,content[j],content[j]);
                     else if(content[j]<58 && content[j]>47) printf("content[%d]=%d, =%c\n",j,content[j],content[j]);
                	    else printf("content[%d]=%d\n",j,content[j]);
 		}
+
 		printf("\n");
-		int retnum = write(fd,content,512*2);
+*/		int retnum = write(fd,content,512*2);
 		printf("write bytes :%d\n",retnum);
 		close(fd);
 		

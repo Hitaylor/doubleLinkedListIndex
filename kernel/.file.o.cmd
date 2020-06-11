@@ -3,6 +3,7 @@ cmd_/home/ok/code/episodeFS_directIO_linbin0417/kernel/file.o := gcc -Wp,-MD,/ho
 source_/home/ok/code/episodeFS_directIO_linbin0417/kernel/file.o := /home/ok/code/episodeFS_directIO_linbin0417/kernel/file.c
 
 deps_/home/ok/code/episodeFS_directIO_linbin0417/kernel/file.o := \
+    $(wildcard include/config/highmem.h) \
   include/linux/compiler_types.h \
     $(wildcard include/config/have/arch/compiler/h.h) \
     $(wildcard include/config/enable/must/check.h) \
@@ -427,7 +428,6 @@ deps_/home/ok/code/episodeFS_directIO_linbin0417/kernel/file.o := \
     $(wildcard include/config/memcg.h) \
     $(wildcard include/config/slob.h) \
   include/linux/nodemask.h \
-    $(wildcard include/config/highmem.h) \
     $(wildcard include/config/numa.h) \
   include/linux/numa.h \
     $(wildcard include/config/nodes/shift.h) \
